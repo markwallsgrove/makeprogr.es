@@ -41,7 +41,7 @@ func tasks(p *Project) {
 		Run("GOOS=linux GOARCH=amd64 go install", In{"src/github.com/markwallsgrove/makeprogr.es/main"})
 	})
 
-	p.Task("dev", D{"build"}, func() {
+	p.Task("dev", D{"init", "generate", "validate"}, func() {
 		Start("main.go", M{"$in": "src/github.com/markwallsgrove/makeprogr.es/main"})
 	}).Watch("src/github.com/markwallsgrove/makeprogr.es/**/*.go").
 		Debounce(3000)

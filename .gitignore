@@ -1,0 +1,7 @@
+.bowerrc
+src/github.com/markwallsgrove/makeprogr.es/static/bower/*
+bin/*
+pkg/*
+.vendor
+tasks/godobin-1.4.5
+src/github.com/markwallsgrove/makeprogr.es/main/static.go

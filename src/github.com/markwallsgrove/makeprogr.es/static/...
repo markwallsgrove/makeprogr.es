@@ -1,0 +1,127 @@
+package static
+
+import (
+	"bytes"
+	"compress/gzip"
+	"io/ioutil"
+	"net/http"
+	"os"
+	"path"
+	"sync"
+	"time"
+)
+
+type _esc_localFS struct{}
+
+var _esc_local _esc_localFS
+
+type _esc_staticFS struct{}
+
+var _esc_static _esc_staticFS
+
+type _esc_file struct {
+	compressed string
+	size       int64
+	local      string
+	isDir      bool
+
+	data []byte
+	once sync.Once
+	name string
+}
+
+func (_esc_localFS) Open(name string) (http.File, error) {
+	f, present := _esc_data[path.Clean(name)]
+	if !present {
+		return nil, os.ErrNotExist
+	}
+	return os.Open(f.local)
+}
+
+func (_esc_staticFS) Open(name string) (http.File, error) {
+	f, present := _esc_data[path.Clean(name)]
+	if !present {
+		return nil, os.ErrNotExist
+	}
+	var err error
+	f.once.Do(func() {
+		f.name = path.Base(name)
+		if f.size == 0 {
+			return
+		}
+		var gr *gzip.Reader
+		gr, err = gzip.NewReader(bytes.NewBufferString(f.compressed))
+		if err != nil {
+			return
+		}
+		f.data, err = ioutil.ReadAll(gr)
+	})
+	if err != nil {
+		return nil, err
+	}
+	return f.File()
+}
+
+func (f *_esc_file) File() (http.File, error) {
+	type httpFile struct {
+		*bytes.Reader
+		*_esc_file
+	}
+	return &httpFile{
+		Reader:    bytes.NewReader(f.data),
+		_esc_file: f,
+	}, nil
+}
+
+func (f *_esc_file) Close() error {
+	return nil
+}
+
+func (f *_esc_file) Readdir(count int) ([]os.FileInfo, error) {
+	return nil, nil
+}
+
+func (f *_esc_file) Stat() (os.FileInfo, error) {
+	return f, nil
+}
+
+func (f *_esc_file) Name() string {
+	return f.name
+}
+
+func (f *_esc_file) Size() int64 {
+	return f.size
+}
+
+func (f *_esc_file) Mode() os.FileMode {
+	return 0
+}
+
+func (f *_esc_file) ModTime() time.Time {
+	return time.Time{}
+}
+
+func (f *_esc_file) IsDir() bool {
+	return f.isDir
+}
+
+func (f *_esc_file) Sys() interface{} {
+	return f
+}
+
+// FS returns a http.Filesystem for the embedded assets. If useLocal is true,
+// the filesystem's contents are instead used.
+func FS(useLocal bool) http.FileSystem {
+	if useLocal {
+		return _esc_local
+	}
+	return _esc_static
+}
+
+var _esc_data = map[string]*_esc_file{
+
+	"/": {
+		isDir: true,
+		local: "static",
+	},
+}

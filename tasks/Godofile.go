@@ -6,13 +6,13 @@ import (
 )
 
 func tasks(p *Project) {
-	Env = `GOPATH=.vendor::$GOPATH`
+	Env = `GOPATH=$GOPATH/.vendor::$GOPATH`
 
 	p.Task("default", D{"dev"})
 
 	p.Task("init?", func() {
 		fmt.Println(" -> creating directories")
-		Bash("mkdir pkg bin")
+		Bash("mkdir pkg bin src/github.com/markwallsgrove/makeprogr.es/static/bower")
 		fmt.Println(" -> installing libs")
 		Bash("go get github.com/nitrous-io/goop")
 		fmt.Println(" -> running goop")
@@ -22,7 +22,11 @@ func tasks(p *Project) {
 	})
 
 	p.Task("generate", func() {
-		Bash("bin/esc -o src/github.com/talis/makeprogr.es/main/static.go -pkg main -prefix src/github.com/talis/makeprogr.es src/github.com/talis/makeprogr.es/static")
+		Bash(`
+			bin/esc -o src/github.com/markwallsgrove/makeprogr.es/main/static.go \
+			-pkg main -prefix src/github.com/markwallsgrove/makeprogr.es \
+			src/github.com/markwallsgrove/makeprogr.es/static
+		`)
 		// TODO: minify css
 		// TODO: minify html
 		// TODO: minify js
@@ -34,12 +38,12 @@ func tasks(p *Project) {
 	})
 
 	p.Task("build", D{"init", "generate", "validate"}, func() {
-		Run("GOOS=linux GOARCH=amd64 go install", In{"src/github.com/talis/makeprogr.es/main"})
+		Run("GOOS=linux GOARCH=amd64 go install", In{"src/github.com/markwallsgrove/makeprogr.es/main"})
 	})
 
 	p.Task("dev", D{"build"}, func() {
-		Start("main.go", M{"$in": "src/github.com/talis/makeprogr.es/main"})
-	}).Watch("src/github.com/talis/makeprogr.es/**/*.go").
+		Start("main.go", M{"$in": "src/github.com/markwallsgrove/makeprogr.es/main"})
+	}).Watch("src/github.com/markwallsgrove/makeprogr.es/**/*.go").
 		Debounce(3000)
 
 }
